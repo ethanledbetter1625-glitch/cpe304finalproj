@@ -15,7 +15,7 @@ To make and save changes:
 2. Save your progress (CTRL+S).
 3. Close Quartus.
 4. Open Command Prompt
-5. Type: cd <filepathtoproject> (ends in FinalProject)
+5. Type: cd filepathtoproject (ends in FinalProject)
 6. Type: git status
 7. Type: git add .
 8. Type: git commit -m "Short description of changes."
