@@ -4,7 +4,7 @@
 
 BEFORE YOU DO ANYTHING USING THIS REPO!!!!
 YOU MUST DO THIS:
-1. Go to Command Prompt (search cmd in the windows explorer)
+1. Go to Command Prompt (search "cmd" in the windows explorer)
 2. Type or copy exactly this: git clone https://github.com/ethanledbetter1625-glitch/cpe304finalproj
 3. Open Quartus
 4. Open project
@@ -16,7 +16,7 @@ To make and save changes:
 1. Use Quartus to make changes.
 2. Save your progress (CTRL+S).
 3. Close Quartus.
-4. Open Command Prompt
+4. Open Command Prompt (same as before).
 5. Type: cd filepathtoproject (ends in FinalProject)
 6. Type: git status
 7. Type: git add .
