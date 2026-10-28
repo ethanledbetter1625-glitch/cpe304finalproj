@@ -12,6 +12,11 @@ YOU MUST DO THIS:
 
 ^You only need to do this once.^
 
+To get the most updated version of what is on GitHub:
+**DO THIS BEFORE ANY EDITS**
+1. cd into the directory
+2. Type: git pull origin main
+
 To make and save changes:
 1. Use Quartus to make changes.
 2. Save your progress (CTRL+S).
@@ -22,10 +27,6 @@ To make and save changes:
 7. Type: git add .
 8. Type: git commit -m "Short description of changes."
 9. Type: git push origin main
-
-To get the most updated version of what is on GitHub:
-1. cd into the directory
-2. Type: git pull origin main
 
 Quartus will automatically detect that the VHDL files changed on your hard drive and will ask if you want to reload them.
 
