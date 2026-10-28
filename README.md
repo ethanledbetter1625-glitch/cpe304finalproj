@@ -3,7 +3,7 @@
 BEFORE YOU DO ANYTHING USING THIS REPO!!!!
 YOU MUST DO THIS:
 1. Go to Command Prompt (search cmd in the windows explorer)
-2. Type or copy exactly this: git clone <YOUR_GITHUB_REPO_URL>
+2. Type or copy exactly this: git clone https://github.com/ethanledbetter1625-glitch/cpe304finalproj
 3. Open Quartus
 4. Open project
 5. Open the .qpf file in the directory
