@@ -27,3 +27,6 @@ output_files/
 *.pin
 *.qws
 *.smsg
+
+#Disclosure: this file, and this file only was made with the help of AI. Agent used: Google Gemini. 
+#I did not know how to make a gitignore with the proper specs regarding Quartus.
