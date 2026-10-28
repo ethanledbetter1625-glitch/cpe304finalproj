@@ -1,0 +1,29 @@
+# --- Keep these source files ---
+!*.v
+!*.vhd
+!*.sv
+!*.sdc
+!*.qpf
+!*.qsf
+!*.qsys
+
+# --- Ignore Quartus compilation & temporary folders ---
+db/
+incremental_db/
+simulation/
+greybox_tmp/
+hc_output/
+hps_isw_software/
+output_files/
+
+# --- Ignore auto-generated report and log files ---
+*.bak
+*.done
+*.rpt
+*.summary
+*.sof
+*.pof
+*.jdi
+*.pin
+*.qws
+*.smsg
