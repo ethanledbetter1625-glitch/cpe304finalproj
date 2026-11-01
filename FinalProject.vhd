@@ -44,7 +44,7 @@ BEGIN
 	calc : entity work.ChangeCalc
 		port map (price => price, paid => paid, change => num, short => open,
 				  quarters => open, dimes => open, nickels => open, pennies => open);
-		pay : entity work.Payment
+	pay : entity work.Payment
 		port map (clk => clk_100hz, reset => '0', sw => sw, paid => paid);
 	--testing payment method
 	
