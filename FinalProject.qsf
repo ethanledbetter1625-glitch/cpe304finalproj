@@ -53,10 +53,6 @@ set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_
 set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_board_design_boundary_scan
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
-set_global_assignment -name VHDL_FILE Part2.vhd
-set_global_assignment -name VHDL_FILE LAB5.vhd
-set_global_assignment -name VHDL_FILE clk_div.vhd
-set_global_assignment -name VHDL_FILE FinalProject.vhd
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
@@ -82,13 +78,18 @@ set_location_assignment PIN_AC28 -to display2[3]
 set_location_assignment PIN_AD30 -to display2[4]
 set_location_assignment PIN_AC29 -to display2[5]
 set_location_assignment PIN_AC30 -to display2[6]
-set_global_assignment -name VHDL_FILE ChangeCalc.vhd
 set_location_assignment PIN_AA14 -to key0
-set_global_assignment -name VHDL_FILE Payment.vhd
 set_location_assignment PIN_AB12 -to sw[0]
 set_location_assignment PIN_AC12 -to sw[1]
 set_location_assignment PIN_AF9 -to sw[2]
 set_location_assignment PIN_AF10 -to sw[3]
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+set_global_assignment -name VHDL_FILE RAM_Entity.vhd
+set_global_assignment -name VHDL_FILE Part2.vhd
+set_global_assignment -name VHDL_FILE LAB5.vhd
+set_global_assignment -name VHDL_FILE clk_div.vhd
+set_global_assignment -name VHDL_FILE FinalProject.vhd
+set_global_assignment -name VHDL_FILE ChangeCalc.vhd
+set_global_assignment -name VHDL_FILE Payment.vhd
 set_global_assignment -name VHDL_FILE Debounce.vhd
 set_global_assignment -name SOURCE_FILE db/FinalProject.cmp.rdb
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
