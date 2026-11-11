@@ -84,3 +84,4 @@ END FPArch;
 --		generic map (cnt_max => 62500)
 --		port map (clock_in => clk_in, clock_out => clk_example);
 --EL 10/30/26
+
