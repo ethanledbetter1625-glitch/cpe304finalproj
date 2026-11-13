@@ -83,10 +83,6 @@ set_location_assignment PIN_AB12 -to sw[0]
 set_location_assignment PIN_AC12 -to sw[1]
 set_location_assignment PIN_AF9 -to sw[2]
 set_location_assignment PIN_AF10 -to sw[3]
-<<<<<<< Updated upstream
-=======
-set_global_assignment -name VHDL_FILE "../../OneDrive - Geneva College/Desktop/CPE304/Keypad_Entity/Keypad_Entity.vhd"
->>>>>>> Stashed changes
 set_global_assignment -name VHDL_FILE To_Int_Entity.vhd
 set_global_assignment -name VHDL_FILE RAM_Entity.vhd
 set_global_assignment -name VHDL_FILE Part2.vhd
@@ -97,7 +93,6 @@ set_global_assignment -name VHDL_FILE ChangeCalc.vhd
 set_global_assignment -name VHDL_FILE Payment.vhd
 set_global_assignment -name VHDL_FILE Debounce.vhd
 set_global_assignment -name SOURCE_FILE db/FinalProject.cmp.rdb
-<<<<<<< Updated upstream
 set_location_assignment PIN_AD26 -to display3[0]
 set_location_assignment PIN_AC27 -to display3[1]
 set_location_assignment PIN_AD25 -to display3[2]
@@ -140,6 +135,4 @@ set_location_assignment PIN_AJ19 -to kp_col[3]
 set_location_assignment PIN_AA15 -to key1
 set_location_assignment PIN_W15 -to key2
 set_location_assignment PIN_Y16 -to key3
-=======
->>>>>>> Stashed changes
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
