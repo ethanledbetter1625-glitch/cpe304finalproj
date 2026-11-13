@@ -6,12 +6,16 @@ entity RAM_Entity is
    port(Clk : in std_logic; --Input for the clock that will control the FSM
 	     R_W : in std_logic; --Read/Write input that will control the FSM
 		  Reset : in std_logic; --Reset input for the FSM
+		  --Creating an input that will enable the clock
+		  clk_enabled : in std_logic;
 		  --Creating an input that will carry the address of the Ram into the
 		  --FSM
 		  Address : in std_logic_vector(7 downto 0);
+		  --Creating an input that will be used to input data
+		  Data_in : in std_logic_vector(11 downto 0);
 		  --Creating a bus that will carry Data from the entity or 
 		  --Bring data to the entity
-		  Data : inout std_logic_vector(11 downto 0));
+		  Data_out : out std_logic_vector(11 downto 0));
 end entity;
 
 
@@ -50,7 +54,7 @@ begin
 				end loop;
 			end loop;
 		--Building the FSM with a case statement
-		elsif (Clk'event and Clk = '1') then
+		elsif (Clk'event and Clk = '1' and clk_enabled = '0') then
 		   Case state is 
 			   when Standby => 
 			      if (R_W = '0') then
@@ -59,14 +63,14 @@ begin
 				   end if;
 				
 				when write_st =>
-				   RAM(Adrs1,Adrs2)<= Data;
+				   RAM(Adrs1,Adrs2)<= Data_in;
 					if (R_W = '1') then
 					   state <= read_st;
 					else state <= write_st;
 					end if;
 					
 				when read_st =>
-				   Data <= RAM(Adrs1,Adrs2);
+				   Data_out <= RAM(Adrs1,Adrs2);
 					if (R_W = '0') then
 					   state <= write_st;
 					else state <= read_st;
