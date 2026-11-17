@@ -80,6 +80,29 @@ ARCHITECTURE FPArch OF FinalProject IS
 	signal data_R_out : std_logic_vector(11 downto 0);
 	--Graham Fales 11/14/2026 End
 	
+	--Graham Fales 11/17/2026 Start
+	--Defining an enumerated type that gives the states of the overall FSM
+	--This enum type will need to be updated as more states are added
+   type FSM_states is (std_mode,gt_price,disp_price,call_pay_ent,pay_st,addrs_clear);
+   --Declaring a signal that will represent the state of the machine
+   signal state : FSM_states;
+
+   --Creating a signal that will be assigned a unique value depending on which signal needs to be
+	--   Displayed. For values entered for the user
+   --   My plan which is available for changing is to have one signal passed to the hex displays	
+	--   And then to use a structure of multiplexers which will assign multiple signals from the different
+   --   entities to this one signal based on the value of the below signal. The FSM will assign the value
+	--   of this signal.
+	signal choose_display_usr : std_logic_vector(2 downto 0);
+	--Currently 100 means "display the address".
+	
+	--Another signal will be made that will control Hex 5 to 3
+	--   This signal will be used to display error messages or RAM values
+	--   Again these signals are for the multiplexer structure that will need to be created
+	signal choose_display_machine : std_logic_vector(2 downto 0);
+	--Currently 100 means "display RAM price"
+	--Currenlty 000 means "display nothing" 
+	--Graham Fales 11/17/2026 End
 	
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 4));
@@ -128,6 +151,42 @@ BEGIN
 	--Instantiating the RAM_Entity
 	Ram : entity.work RAM_Entity port map(clk_in,R_W,key0,enter,address_r,data_r_in,data_r_out);
 	--Graham Fales 11/14/2026 End
+	
+	--Graham Fales 11/17/2026 Start
+	--Assigning the address of the keypad to the address of the RAM
+	address_r <= address_k;
+	--Building the Overall FSM for this project. The idea is 
+	--    for this FSM to control which data are sent to which entity.
+	--    It will monitor Key 2 and activate the change prices entity when Key 2 is pressed
+	--    this FSM will use signals to activate entities. It will send an activation signal 
+	--    to each entity when that entity is needed.
+	--    This FSM will be split into two sections or you can think if it as two sections
+	--    If Key 2 is not pressed, then this FSM will be on the regular entering prices and 
+	--    calulating change mode. Once Key 2 is pressed, the FSM will be on the change prices mode.
+	Overall_FSM: process(clk,key0) 
+	
+	begin
+	
+	   if(key0 = '0') then --Defining Reset State
+		   state <=st_mode;
+			
+		elsif(clk'event and clk = '1') then --When reset is not activated
+		   Case state is
+			   when st_mode =>
+				   choose_display_usr <= "100"; --Setting the currently as of 11/17/2026 non-existent 
+					                         --Multiplexer array to display the address entered
+					reg_sel <= '0'; --Setting the keypad entity to record the address
+					if (address_k(7 downto 4) = "0001" or address_k(7 downto 4) = "0010" or address_k(7 downto 4) = "0011" 
+					or address_k(7 downto 4) = "0100") then --Checking to make sure a valid address has been entered -- We need to talk to Barlow about what should happen if an invalid address has been entered
+					   state <= gt_price; --If a valid address is entered, change to the next state
+					else state <=st_mode; --If the address is invalid stay in this state until a valid address is entered
+					end if;
+					
+				when st_mode =>
+				   
+				   choose_display_machine <= "100"; --allowing the price of the ram to be displayed
+	--Graham Fales 11/17/2026 End
+	
 END FPArch;
 
 --if you need to make an instance of the clock with a value that is not 62500 (this is just an init value)
