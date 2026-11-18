@@ -1,5 +1,6 @@
 --All testing done. 
 --Debounce testing done. --EL 11/04/2026
+--RAM tied to payment (price from ram into ChangeCalc). --EL 11/17/2026
 --When you make changes, initial and date them with a comment.
 --ALWAYS ALWAYS ALWAYS PULL FROM ORIGIN BEFORE MAKING CHANGES
 
@@ -33,7 +34,9 @@ ARCHITECTURE FPArch OF FinalProject IS
 	end component;
 	--EL 10/30/26
 	signal key_prev : std_logic := '1';
-	constant price : integer range 0 to 999 := 135; --static price, $1.35
+	signal price : integer range 0 to 999; --comes from ram now --EL 11/17/2026
+	signal p_hund, p_ten, p_one : integer range 0 to 9; --ram price digits --EL 11/17/2026
+	signal xin_s : std_logic_vector(29 downto 0); --EL 11/17/2026
 	signal paid    : integer range 0 to 999;
 	signal num : integer range 0 to 999 := 0;
 	signal dig0, dig1, dig2 : std_logic_vector(3 downto 0);
@@ -58,7 +61,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	signal data_kPad : std_logic_vector(11 downto 0);
 	
 	--Creating the registor select signal that will be used to change which values the keypad is recording
-	signal reg_sel : std_logic := '0'; --Default means that the keypad will record the address
+	signal reg_sel : std_logic := '1'; --1 = shift reg records the address (Shift_Reg_Entity), was 0 --EL 11/17/2026
 	
 	--Creating signals for the RAM entity to connect to other entities
 	
@@ -104,6 +107,35 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Currenlty 000 means "display nothing" 
 	--Graham Fales 11/17/2026 End
 	
+	--EL 11/17/26 begin
+	--lab5 codes
+	constant C_0     : std_logic_vector(4 downto 0) := "00000";
+	constant C_1     : std_logic_vector(4 downto 0) := "00001";
+	constant C_2     : std_logic_vector(4 downto 0) := "00010";
+	constant C_3     : std_logic_vector(4 downto 0) := "00011";
+	constant C_4     : std_logic_vector(4 downto 0) := "00100";
+	constant C_5     : std_logic_vector(4 downto 0) := "00101";
+	constant C_6     : std_logic_vector(4 downto 0) := "00110";
+	constant C_7     : std_logic_vector(4 downto 0) := "00111";
+	constant C_8     : std_logic_vector(4 downto 0) := "01000";
+	constant C_9     : std_logic_vector(4 downto 0) := "01001";
+	constant C_STAR  : std_logic_vector(4 downto 0) := "01010";
+	constant C_H     : std_logic_vector(4 downto 0) := "01011";
+	constant C_C     : std_logic_vector(4 downto 0) := "01100";
+	constant C_D     : std_logic_vector(4 downto 0) := "01101";
+	constant C_E     : std_logic_vector(4 downto 0) := "01110";
+	constant C_BLANK : std_logic_vector(4 downto 0) := "01111";
+	constant C_A     : std_logic_vector(4 downto 0) := "10000";
+	constant C_G     : std_logic_vector(4 downto 0) := "10001";
+	constant C_S     : std_logic_vector(4 downto 0) := "10010";
+	constant C_L     : std_logic_vector(4 downto 0) := "10011";
+	constant C_R     : std_logic_vector(4 downto 0) := "10100";
+	constant C_LH    : std_logic_vector(4 downto 0) := "10101"; --lowercase h
+	constant C_F     : std_logic_vector(4 downto 0) := "10110";
+	constant C_T     : std_logic_vector(4 downto 0) := "10111";
+	constant C_DASH  : std_logic_vector(4 downto 0) := "11000";
+	--EL 11/17/26 end
+	
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 4));
 	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 4));
@@ -127,8 +159,9 @@ BEGIN
 	end generate;
 	--EL 11/04/2026
 
+	xin_s <= C_BLANK & C_BLANK & C_BLANK & '0' & dig2 & '0' & dig1 & '0' & dig0; --hex5-3 blank, hex2-0 = num --EL 11/17/2026
 	disp : entity work.Part2
-		port map (xin => x"000" & dig2 & dig1 & dig0,
+		port map (xin => xin_s, --part2 is 6 x 5 bit codes now --EL 11/17/2026
 				  sevenseg1 => display0, sevenseg2 => display1, sevenseg3 => display2);
 	calc : entity work.ChangeCalc
 		port map (price => price, paid => paid, change => num, short => open,
@@ -143,49 +176,61 @@ BEGIN
 		port map (clock_in => clk_in, clock_out => clk_100hz);
 	--EL 11/04/2026
 	
-	--TODO: ram
 	--Graham Fales 11/14/2026 Start
 	--Instantiating the Keypad_Entity
-	keypad : entity.work Keypad_Entity port map(clk_in,key0,reg_sel,row,column,address_k,data_kpad);
+	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
 	
 	--Instantiating the RAM_Entity
-	Ram : entity.work RAM_Entity port map(clk_in,R_W,key0,enter,address_r,data_r_in,data_r_out);
+	Ram : entity work.RAM_Entity port map(clk_in,R_W,key0,Ram_Enter,address_r,data_r_in,data_r_out); --fixed syntax --EL 11/17/2026
 	--Graham Fales 11/14/2026 End
 	
-	--Graham Fales 11/17/2026 Start
-	--Assigning the address of the keypad to the address of the RAM
-	address_r <= address_k;
-	--Building the Overall FSM for this project. The idea is 
-	--    for this FSM to control which data are sent to which entity.
-	--    It will monitor Key 2 and activate the change prices entity when Key 2 is pressed
-	--    this FSM will use signals to activate entities. It will send an activation signal 
-	--    to each entity when that entity is needed.
-	--    This FSM will be split into two sections or you can think if it as two sections
-	--    If Key 2 is not pressed, then this FSM will be on the regular entering prices and 
-	--    calulating change mode. Once Key 2 is pressed, the FSM will be on the change prices mode.
-	Overall_FSM: process(clk,key0) 
+	--RAM to payment --EL 11/17/2026
+	R_W <= '1';         --read only for now
+	Ram_Enter <= '0';   --always enabled
+	data_r_in <= (others => '0');
+	--only valid locations (11-44) go to the ram, anything else reads 11
+	address_r <= address_k when (to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
+	                             to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4) else x"11";
+	to_int : entity work.To_Int_Entity port map(data_r_out, p_hund, p_ten, p_one);
+	price <= p_hund * 100 + p_ten * 10 + p_one; --cents, goes into ChangeCalc against paid from Payment
 	
-	begin
+	--Graham's FSM commented out until it's finished, it doesn't compile yet --EL 11/17/2026
+	--  (clk not declared, st_mode not in FSM_states and listed twice, case/process never closed,
+	--   and its address_r <= address_k would fight the address_r line above)
+--	--Graham Fales 11/17/2026 Start
+--	--Assigning the address of the keypad to the address of the RAM
+--	address_r <= address_k;
+--	--Building the Overall FSM for this project. The idea is 
+--	--    for this FSM to control which data are sent to which entity.
+--	--    It will monitor Key 2 and activate the change prices entity when Key 2 is pressed
+--	--    this FSM will use signals to activate entities. It will send an activation signal 
+--	--    to each entity when that entity is needed.
+--	--    This FSM will be split into two sections or you can think if it as two sections
+--	--    If Key 2 is not pressed, then this FSM will be on the regular entering prices and 
+--	--    calulating change mode. Once Key 2 is pressed, the FSM will be on the change prices mode.
+--	Overall_FSM: process(clk,key0) 
 	
-	   if(key0 = '0') then --Defining Reset State
-		   state <=st_mode;
+--	begin
+	
+--	   if(key0 = '0') then --Defining Reset State
+--		   state <=st_mode;
 			
-		elsif(clk'event and clk = '1') then --When reset is not activated
-		   Case state is
-			   when st_mode =>
-				   choose_display_usr <= "100"; --Setting the currently as of 11/17/2026 non-existent 
-					                         --Multiplexer array to display the address entered
-					reg_sel <= '0'; --Setting the keypad entity to record the address
-					if (address_k(7 downto 4) = "0001" or address_k(7 downto 4) = "0010" or address_k(7 downto 4) = "0011" 
-					or address_k(7 downto 4) = "0100") then --Checking to make sure a valid address has been entered -- We need to talk to Barlow about what should happen if an invalid address has been entered
-					   state <= gt_price; --If a valid address is entered, change to the next state
-					else state <=st_mode; --If the address is invalid stay in this state until a valid address is entered
-					end if;
+--		elsif(clk'event and clk = '1') then --When reset is not activated
+--		   Case state is
+--			   when st_mode =>
+--				   choose_display_usr <= "100"; --Setting the currently as of 11/17/2026 non-existent 
+--					                         --Multiplexer array to display the address entered
+--					reg_sel <= '0'; --Setting the keypad entity to record the address
+--					if (address_k(7 downto 4) = "0001" or address_k(7 downto 4) = "0010" or address_k(7 downto 4) = "0011" 
+--					or address_k(7 downto 4) = "0100") then --Checking to make sure a valid address has been entered -- We need to talk to Barlow about what should happen if an invalid address has been entered
+--					   state <= gt_price; --If a valid address is entered, change to the next state
+--					else state <=st_mode; --If the address is invalid stay in this state until a valid address is entered
+--					end if;
 					
-				when st_mode =>
-				   
-				   choose_display_machine <= "100"; --allowing the price of the ram to be displayed
-	--Graham Fales 11/17/2026 End
+--				when st_mode =>
+--				   
+--				   choose_display_machine <= "100"; --allowing the price of the ram to be displayed
+--	--Graham Fales 11/17/2026 End
 	
 END FPArch;
 
@@ -195,4 +240,3 @@ END FPArch;
 --		generic map (cnt_max => 62500)
 --		port map (clock_in => clk_in, clock_out => clk_example);
 --EL 10/30/26
-

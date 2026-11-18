@@ -62,14 +62,14 @@ architecture keypad of Keypad_Entity is
 	--signal LED_test : std_logic := '1';
  
 	component clk_div
-	   generic(count_mx : integer := 6000);
+	   generic(cnt_max : integer := 6000);
 		port(clock_in : in std_logic; clock_out : out std_logic);
 	end component;
 	
 begin
    --LED<=LED_test;
    addrs_D <= Adrs_Data;--Assigning the temporary signal addrs_D to the input to the entity
-   clk_divider : clk_div port map(clk,clk_slow);
+   clk_divider : clk_div generic map(cnt_max => 6000) port map(clk,clk_slow);
    --Telling the circuit what values to assign columns and rows so that they can 
 	--Read on the proper clock pulse
 	row <= "ZZZZ" when (nextState = row_rd) else "0000";
