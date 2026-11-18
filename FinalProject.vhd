@@ -14,6 +14,10 @@ entity FinalProject is
 	port(clk_in : in std_logic;    --50 mhz board clock
 		  key0 : in std_logic;      --active low
 		  
+		  --CC 11/18/2026 START
+		  LEDR : out std_logic_vector(3 downto 0); --LED Lights output
+		  --CC 11/18/2026 END
+		  
 		  --Graham Fales 11/14/2026 Start
 		  --Adding the ports for the column and row buses for the keypad
 		  row : inout std_logic_vector(3 downto 0);
@@ -107,6 +111,12 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Currenlty 000 means "display nothing" 
 	--Graham Fales 11/17/2026 End
 	
+		--CC 11/18/2026 START																		
+	signal dispense_start: std_logic := '0'; --When to start dispensing change (0 --> Off, 1 --> On)
+	signal dispenser_busy: std_logic; --Still working on dispensing change, wait
+	signal dispenser_done: std_logic; --Machine done dispensing, waiting for next value of change
+		--CC 11/18/2026 END
+	
 	--EL 11/17/26 begin
 	--lab5 codes
 	constant C_0     : std_logic_vector(4 downto 0) := "00000";
@@ -170,6 +180,19 @@ BEGIN
 		port map (clk => clk_100hz, reset => '0', sw => sw_clean, paid => paid);
 	--testing payment method
 	--EL 11/04/2026 uses debounced switches
+	
+	--CC 11/18/2026 START
+	Dispenser: entity work.ChangeDispenser
+		port map(
+			clk => clk_in,
+			reset => not key0,
+			start => dispense_start,
+			change_cents => num, --Connecting my change_cents value to num, the integer value outputed from EL's ChangeCalc
+			LED => LEDR, --Using all four LEDs assigned above
+			busy => dispenser_busy, --Calling busy from interior to dispenser_busy signal in main
+			done => dispenser_done --Calling done from interior to dispenser_done signal in main
+			);
+	--CC 11/18/2026 END
 	
 	div_btn : clk_div
 		generic map (cnt_max => 250000) --100 hz from 50 mhz
