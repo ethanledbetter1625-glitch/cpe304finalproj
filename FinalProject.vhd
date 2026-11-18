@@ -146,6 +146,13 @@ ARCHITECTURE FPArch OF FinalProject IS
 	constant C_DASH  : std_logic_vector(4 downto 0) := "11000";
 	--EL 11/17/26 end
 	
+	--Graham Fales 11/18/2026 start
+	--Declaring signals that will hold the values for the amount that the user pays
+	signal dig3 : std_logic_vector(3 downto 0);
+	signal dig4 : std_logic_vector(3 downto 0);
+	signal dig5 : std_logic_vector(3 downto 0);
+	--Graham Fales 11/18/2026 end
+	
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 4));
 	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 4));
@@ -175,9 +182,9 @@ BEGIN
 	end generate;
 	--Graham Fales 11/18/2026 Start
 	--Creating the multiplexer structer that will govern which things are displayed when
-	xin_s <= C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
-	         '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
-			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' data_r_out(3 downto 0) & '0' & dig3 & '0' & dig4 & '0' dig5 when choose_display "101" else
+	xin_s <= C_BLANK & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
+	         '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
+			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & '0' & dig3 & '0' & dig4 & '0' & dig5 when choose_display = "101" else
 				C_E & C_R & C_R & C_E & C_R & C_R;
 	
 	--Graham Fales 11/18/2026 End
@@ -245,14 +252,14 @@ BEGIN
 --	--    This FSM will be split into two sections or you can think if it as two sections
 --	--    If Key 2 is not pressed, then this FSM will be on the regular entering prices and 
 --	--    calulating change mode. Once Key 2 is pressed, the FSM will be on the change prices mode.
-	Overall_FSM: process(clk,key0) 
+	Overall_FSM: process(clk_in,key0) 
 	
 	begin
 	
 	   if(key0 = '0') then --Defining Reset State
 		   state <=std_mode;
 			
-		elsif(clk'event and clk = '1') then --When reset is not activated
+		elsif(clk_in'event and clk_in = '1') then --When reset is not activated
 		   Case state is
 			
 			   when std_mode =>
@@ -276,9 +283,12 @@ BEGIN
                choose_display <= "110"; --allowing the price of the ram to be displayed
 				   state <= disp_pay;
 				when disp_pay => --Displays the values the user is entering
-				   choose_display_usr <= "101"; --Value corresponding to the pay value being entered by using the multiplexer structure
+				   choose_display <= "101"; --Value corresponding to the pay value being entered by using the multiplexer structure
 					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
 					state <= std_mode;
+					
+			   when others => --covering default
+				   state <= std_mode;
 			end case;
 		end if;
 	end process;
