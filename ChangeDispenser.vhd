@@ -8,7 +8,7 @@ entity ChangeDispenser is
 		reset: in std_logic;
 		start: in std_logic;
 		
-		change_cents: in unsigned(9 downto 0);
+		change_cents: in integer range 0 to 999; --CC 11/18/2026, Changed from taking in unsigned to taking in integers
 		
 		LED: out std_logic_vector(3 downto 0);
 		busy: out std_logic;
@@ -65,7 +65,7 @@ begin
 					
 					if start= '1' then
 						
-						remaining <= to_integer(change_cents);
+						remaining <= change_cents; --CC 11/18/2026 Deleted conversion for integer
 						busy<= '1';
 						state<= SELECT_COIN;
 					end if;
