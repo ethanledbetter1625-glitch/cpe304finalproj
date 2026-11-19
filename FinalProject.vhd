@@ -26,6 +26,9 @@ entity FinalProject is
 		  display0 : out std_logic_vector(6 downto 0);
 		  display1 : out std_logic_vector(6 downto 0);
 		  display2 : out std_logic_vector(6 downto 0);
+		  display3 : out std_logic_vector(6 downto 0);
+		  display4 : out std_logic_vector(6 downto 0);
+		  display5 : out std_logic_vector(6 downto 0);
 		  sw       : in std_logic_vector(3 downto 0)); --raw switches, use sw_clean in logic
 end FinalProject;
 
@@ -43,7 +46,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	signal xin_s : std_logic_vector(29 downto 0); --EL 11/17/2026
 	signal paid    : integer range 0 to 999;
 	signal num : integer range 0 to 999 := 0;
-	signal dig0, dig1, dig2 : std_logic_vector(3 downto 0);
+	signal dig0, dig1, dig2, dig3, dig4, dig5 : std_logic_vector(4 downto 0);
 	signal clk_100hz : std_logic;
 	--EL 10/31/26
 	signal sw_clean : std_logic_vector(3 downto 0); --debounced switch levels
@@ -148,19 +151,21 @@ ARCHITECTURE FPArch OF FinalProject IS
 	
 	--Graham Fales 11/18/2026 start
 	--Declaring signals that will hold the values for the amount that the user pays
-	signal dig3 : std_logic_vector(3 downto 0);
-	signal dig4 : std_logic_vector(3 downto 0);
-	signal dig5 : std_logic_vector(3 downto 0);
+	--signal dig3 : std_logic_vector(3 downto 0);
+	--signal dig4 : std_logic_vector(3 downto 0);
+	--signal dig5 : std_logic_vector(3 downto 0);
 	--Graham Fales 11/18/2026 end
+	--delete these comments after reading this:
+	--moved these guys up to be w/ the declarations of the other ones. EL
 	
 BEGIN
-	dig0 <= std_logic_vector(to_unsigned(num mod 10, 4));
-	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 4));
-	dig2 <= std_logic_vector(to_unsigned(num / 100, 4));
+	dig0 <= std_logic_vector(to_unsigned(num mod 10, 5));
+	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 5));
+	dig2 <= std_logic_vector(to_unsigned(num / 100, 5));
 	--Graham Fales 11/18/2026 Start
-	dig3 <= std_logic_vector(to_unsigned(paid mod 10, 4));
-	dig4 <= std_logic_vector(to_unsigned((paid / 10) mod 10, 4));
-	dig5 <= std_logic_vector(to_unsigned(paid / 100, 4));	
+	dig3 <= std_logic_vector(to_unsigned(paid mod 10, 5));
+	dig4 <= std_logic_vector(to_unsigned((paid / 10) mod 10, 5));
+	dig5 <= std_logic_vector(to_unsigned(paid / 100, 5));	
 	--Graham Fales 11/18/2026 end
 	
 	--calculate digits
@@ -182,37 +187,56 @@ BEGIN
 	end generate;
 	--Graham Fales 11/18/2026 Start
 	--Creating the multiplexer structer that will govern which things are displayed when
-	xin_s <= C_BLANK & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
-	         '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
-			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & '0' & dig3 & '0' & dig4 & '0' & dig5 when choose_display = "101" else
-				C_E & C_R & C_R & C_E & C_R & C_R;
+--	xin_s <= C_BLANK & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
+--	         '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
+--			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & '0' & dig3 & '0' & dig4 & '0' & dig5 when choose_display = "101" else
+--				C_E & C_R & C_R & C_E & C_R & C_R;
 	
+	xin_s <= C_BLANK & C_BLANK & C_BLANK & dig2 & dig1 & dig0; --test
 	--Graham Fales 11/18/2026 End
 	--EL 11/04/2026
 
 	--xin_s <= C_BLANK & C_BLANK & C_BLANK & '0' & dig2 & '0' & dig1 & '0' & dig0; --hex5-3 blank, hex2-0 = num --EL 11/17/2026 --Commented by GF 11/18/2026
 	disp : entity work.Part2
 		port map (xin => xin_s, --part2 is 6 x 5 bit codes now --EL 11/17/2026
-				  sevenseg1 => display0, sevenseg2 => display1, sevenseg3 => display2);
+				  sevenseg1 => display0, 
+				  sevenseg2 => display1, 
+				  sevenseg3 => display2,
+				  sevenseg4 => display3,
+				  sevenseg5 => display4,
+				  sevenseg6 => display5
+				  );
 	calc : entity work.ChangeCalc
-		port map (price => price, paid => paid, change => num, short => open,
-				  quarters => open, dimes => open, nickels => open, pennies => open);
+		port map (price => price, 
+					 paid => paid, 
+					 change => num, 
+					 short => open,
+				    quarters => open, 
+				    dimes => open, 
+					 nickels => open, 
+					 pennies => open);
 	pay : entity work.Payment
-		port map (clk => clk_100hz, reset => '0', sw => sw_clean, paid => paid);
+		port map (clk => clk_100hz, 
+					 reset => '0', 
+					 sw => sw_clean, 
+					 paid => paid,
+					 item_price => price,
+					 LED => LEDR --kicked back coin leds, led0 nickel ... led3 dollar --EL 11/18/2026
+					 ); --tabbed for visibility EL
 	--testing payment method
 	--EL 11/04/2026 uses debounced switches
 	
 	--CC 11/18/2026 START
-	Dispenser: entity work.ChangeDispenser
-		port map(
-			clk => clk_in,
-			reset => not key0,
-			start => dispense_start,
-			change_cents => num, --Connecting my change_cents value to num, the integer value outputed from EL's ChangeCalc
-			LED => LEDR, --Using all four LEDs assigned above
-			busy => dispenser_busy, --Calling busy from interior to dispenser_busy signal in main
-			done => dispenser_done --Calling done from interior to dispenser_done signal in main
-			);
+--	Dispenser: entity work.ChangeDispenser
+--		port map(
+--			clk => clk_in,
+--			reset => not key0,
+--			start => dispense_start,
+--			change_cents => num, --Connecting my change_cents value to num, the integer value outputed from EL's ChangeCalc
+--			LED => LEDR, --Using all four LEDs assigned above
+--			busy => dispenser_busy, --Calling busy from interior to dispenser_busy signal in main
+--			done => dispenser_done --Calling done from interior to dispenser_done signal in main
+--			);
 	--CC 11/18/2026 END
 	
 	div_btn : clk_div
@@ -222,28 +246,29 @@ BEGIN
 	
 	--Graham Fales 11/14/2026 Start
 	--Instantiating the Keypad_Entity
-	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
+--	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
 	
 	--Instantiating the RAM_Entity
-	Ram : entity work.RAM_Entity port map(clk_in,R_W,key0,Ram_Enter,address_r,data_r_in,data_r_out); --fixed syntax --EL 11/17/2026
+--	Ram : entity work.RAM_Entity port map(clk_in,R_W,key0,Ram_Enter,address_r,data_r_in,data_r_out); --fixed syntax --EL 11/17/2026
 	--Graham Fales 11/14/2026 End
 	
 	--RAM to payment --EL 11/17/2026 --Graham Fales Edited 11/18/2026 --Commented out address assignment
 	--R_W <= '1';         --read only for now
 	--Ram_Enter <= '0';   --always enabled -GF Edited 11/18/2026 commented out, FSM will dictate when this is on or off
-	data_r_in <= (others => '0');
+--	data_r_in <= (others => '0');
 	--only valid locations (11-44) go to the ram, anything else reads 11
 	--address_r <= address_k when (to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
 	                            -- to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4) else x"11";
-	to_int : entity work.To_Int_Entity port map(data_r_out, p_hund, p_ten, p_one);
-	price <= p_hund * 100 + p_ten * 10 + p_one; --cents, goes into ChangeCalc against paid from Payment
+--	to_int : entity work.To_Int_Entity port map(data_r_out, p_hund, p_ten, p_one);
+--	price <= p_hund * 100 + p_ten * 10 + p_one; --cents, goes into ChangeCalc against paid from Payment
+	price <= 100; --TEMP test price ($1.00) while ram is commented out, DELETE when the to_int/price line above comes back --EL 11/18/2026
 	
 	--Graham's FSM commented out until it's finished, it doesn't compile yet --EL 11/17/2026
 	--  (clk not declared, st_mode not in FSM_states and listed twice, case/process never closed,
 	--   and its address_r <= address_k would fight the address_r line above)
 --	--Graham Fales 11/17/2026 Start
 	--Assigning the address of the keypad to the address of the RAM
-	address_r <= address_k;
+--	address_r <= address_k;
 --	--Building the Overall FSM for this project. The idea is 
 --	--    for this FSM to control which data are sent to which entity.
 --	--    It will monitor Key 2 and activate the change prices entity when Key 2 is pressed
@@ -252,46 +277,46 @@ BEGIN
 --	--    This FSM will be split into two sections or you can think if it as two sections
 --	--    If Key 2 is not pressed, then this FSM will be on the regular entering prices and 
 --	--    calulating change mode. Once Key 2 is pressed, the FSM will be on the change prices mode.
-	Overall_FSM: process(clk_in,key0) 
+--	Overall_FSM: process(clk_in,key0) 
 	
-	begin
+--	begin
 	
-	   if(key0 = '0') then --Defining Reset State
-		   state <=std_mode;
+--	   if(key0 = '0') then --Defining Reset State-
+--		   state <=std_mode;
 			
-		elsif(clk_in'event and clk_in = '1') then --When reset is not activated
-		   Case state is
+--		elsif(clk_in'event and clk_in = '1') then --When reset is not activated
+--		   Case state is
 			
-			   when std_mode =>
-				   R_W <= '1'; --setting RAM to read mode for now
+--			   when std_mode =>
+--				   R_W <= '1'; --setting RAM to read mode for now
 					
-				   choose_display <= "100"; --Setting the currently as of 11/17/2026 non-existent 
+--				   choose_display <= "100"; --Setting the currently as of 11/17/2026 non-existent 
 					                             --  Multiplexer array to display the address entered
 														  
-					reg_sel <= '0'; --Setting the keypad entity to record the address
+--					reg_sel <= '0'; --Setting the keypad entity to record the address
 					
 					--Checking to make sure a valid address has been entered -- We need to talk to Barlow about what should happen if an 
 					--  invalid address has been entered
-					if ((to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
-	                             to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4)) then 
-					   state <= gt_price; --If a valid address is entered, change to the next state
-					else state <=std_mode; --If the address is invalid stay in this state until a valid address is entered
-					end if;
+--					if ((to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
+--	                             to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4)) then 
+--					   state <= gt_price; --If a valid address is entered, change to the next state
+--					else state <=std_mode; --If the address is invalid stay in this state until a valid address is entered
+--					end if;
 					
-				when gt_price => --We have a valid address and now are sending it to the RAM by allowing the RAM to clock
-				   RAM_Enter <= '1'; --Allowing the RAM to go
-               choose_display <= "110"; --allowing the price of the ram to be displayed
-				   state <= disp_pay;
-				when disp_pay => --Displays the values the user is entering
-				   choose_display <= "101"; --Value corresponding to the pay value being entered by using the multiplexer structure
+--				when gt_price => --We have a valid address and now are sending it to the RAM by allowing the RAM to clock
+--				   RAM_Enter <= '1'; --Allowing the RAM to go
+--              choose_display <= "110"; --allowing the price of the ram to be displayed
+--				   state <= disp_pay;
+--				when disp_pay => --Displays the values the user is entering
+--				   choose_display <= "101"; --Value corresponding to the pay value being entered by using the multiplexer structure
 					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
-					state <= std_mode;
+--					state <= std_mode;
 					
-			   when others => --covering default
-				   state <= std_mode;
-			end case;
-		end if;
-	end process;
+--			   when others => --covering default
+--				   state <= std_mode;
+--			end case;
+--		end if;
+--	end process;
 				
 				
 				
