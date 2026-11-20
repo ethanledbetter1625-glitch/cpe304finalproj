@@ -54,6 +54,15 @@ ARCHITECTURE FPArch OF FinalProject IS
 	signal sw_pulse : std_logic_vector(3 downto 0); --1 clk pulse on each switch up-flip
 	--EL 11/04/2026
 	
+	--Graham Fales 11/20/2026 start
+	--Creating a signal to record the previous value of the address
+	signal addrs_prev : std_logic_vector(7 downto 0);
+	--Creating a signal to activate if the current and previous addresses are not equal
+	signal addrs_changed : std_logic:='0';
+	--Defining a signal to reset the payment entity
+	signal rst_pay : std_logic;
+	--Graham Fales 11/20/2026 End
+	
 	--Graham Fales 11/14/2026 Start
 	--Declaring the signals that will be used to carry information between the keypad entity and other entities
 	--Note the Keypad_Entity requires a 50MHz clock
@@ -94,7 +103,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Graham Fales 11/17/2026 Start
 	--Defining an enumerated type that gives the states of the overall FSM
 	--This enum type will need to be updated as more states are added
-   type FSM_states is (std_mode,gt_price,disp_pay,call_pay_ent,pay_st,addrs_clear);
+   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch);
    --Declaring a signal that will represent the state of the machine
    signal state : FSM_states;
 
@@ -202,88 +211,86 @@ BEGIN
 					sw_pulse => sw_pulse(i)
 			  );
 	end generate;
-	--Nicholas Winowitch 11/19/2026 ChangePrice connections START
-
-    --Validate the item address from the keypad
-	 --upper four bits = row digit. Lower four bits = column digit.
-	 --Both digits must be 1-4. 
-    cp_item_valid <= '1' when
-        (
-            address_k(7 downto 4) = x"1" or
-            address_k(7 downto 4) = x"2" or
-            address_k(7 downto 4) = x"3" or
-            address_k(7 downto 4) = x"4"
-        )
-        and
-        (
-            address_k(3 downto 0) = x"1" or
-            address_k(3 downto 0) = x"2" or
-            address_k(3 downto 0) = x"3" or
-            address_k(3 downto 0) = x"4"
-        )
-        else '0';  --Rejects the invalid or incomplete addresses
-		  -- This checks the stored address, not whether a new key was pressed.
-        -- The keypad selector must be cleared between item selections.
-
-
-        -- Provisional permission to enter maintenance.
-        -- This checks the main state and deposited amount.
-        -- The overall FSM still needs to provide a complete transaction-idle check.
-    cp_purchase_idle <= '1' when
-        state = std_mode and paid = 0 -- Standard mode with not deposited money
-        else '0';
-		  -- Create and connect the ChangePrices controller.
-        -- Left of => is the ChangePrices port.
-        -- Right of => is its connection in FinalProject.
-    price_controller : entity work.ChangePrices
-        port map (
-            --Clock and separate reset.
-            clk   => clk_in, -- uses the boards 50MHz clock
-            reset => '0',    -- separate reset is not active. Internal KEY0 handling still operates.
-
-            --Physical active-low buttons.
-            key0 => key0, --Save in maintenance mode, reset in purchase mode.
-            key2 => key2, --Enter/Exit
-
-            --Permission to enter maintenance.
-            purchase_idle => cp_purchase_idle, -- Must be '1' to accept a request to enter maintenance.
-
-            --Item selected using the existing keypad.
-            item_address => address_k,     -- Supply the row and column digits of the selected item.
-            item_valid   => cp_item_valid, -- Indicate that both digits are within the allowed range.
-
-            --Existing debounced switch levels.
-            sw_clean => sw_clean,
-
-            --Maintenance and entry status.
-            setup_active   => cp_setup_active,   -- Reports maintenance mode to the overall controller.
-            clear_selector => cp_clear_selector, -- Requests clearing the old keypad selection.
-            item_chosen    => cp_item_chosen,    -- Reports that an item has been selected.
-            price_error    => cp_price_error,    -- Reports an invalid entry.
-
-            --Draft price for display.
-            draft_cents => cp_draft_cents, -- Integer cents, before conversion to display digits.
-
-            --Reset outputs.
-            system_reset => cp_system_reset,  -- Active-high reset request.
-            ram_reset_n  => cp_ram_reset_n,   -- Active-low RAM reset request.
-
-            --Save outputs.
-            write_request => cp_write_request,  -- Requests saving the selected item's new price.
-            ram_address   => cp_address,        -- Address to capture with the save request.
-            ram_price     => cp_price           -- BCD price to capture with the save request.
-        );
+--	--Nicholas Winowitch 11/19/2026 ChangePrice connections START
+--
+--    --Validate the item address from the keypad
+--	 --upper four bits = row digit. Lower four bits = column digit.
+--	 --Both digits must be 1-4. 
+--    cp_item_valid <= '1' when
+--        (
+--            address_k(7 downto 4) = x"1" or
+--            address_k(7 downto 4) = x"2" or
+--            address_k(7 downto 4) = x"3" or
+--            address_k(7 downto 4) = x"4"
+--        )
+--        and
+--        (
+--            address_k(3 downto 0) = x"1" or
+--            address_k(3 downto 0) = x"2" or
+--            address_k(3 downto 0) = x"3" or
+--            address_k(3 downto 0) = x"4"
+--        )
+--        else '0';  --Rejects the invalid or incomplete addresses
+--		  -- This checks the stored address, not whether a new key was pressed.
+--        -- The keypad selector must be cleared between item selections.
+--
+--
+--        -- Provisional permission to enter maintenance.
+--        -- This checks the main state and deposited amount.
+--        -- The overall FSM still needs to provide a complete transaction-idle check.
+--    cp_purchase_idle <= '1' when
+--        state = std_mode and paid = 0 -- Standard mode with not deposited money
+--        else '0';
+--		  -- Create and connect the ChangePrices controller.
+--        -- Left of => is the ChangePrices port.
+--        -- Right of => is its connection in FinalProject.
+--    price_controller : entity work.ChangePrices
+--        port map (
+--            --Clock and separate reset.
+--            clk   => clk_in, -- uses the boards 50MHz clock
+--            reset => '0',    -- separate reset is not active. Internal KEY0 handling still operates.
+--
+--            --Physical active-low buttons.
+--            key0 => key0, --Save in maintenance mode, reset in purchase mode.
+--            key2 => key2, --Enter/Exit
+--
+--            --Permission to enter maintenance.
+--            purchase_idle => cp_purchase_idle, -- Must be '1' to accept a request to enter maintenance.
+--
+--            --Item selected using the existing keypad.
+--            item_address => address_k,     -- Supply the row and column digits of the selected item.
+--            item_valid   => cp_item_valid, -- Indicate that both digits are within the allowed range.
+--
+--            --Existing debounced switch levels.
+--            sw_clean => sw_clean,
+--
+--            --Maintenance and entry status.
+--            setup_active   => cp_setup_active,   -- Reports maintenance mode to the overall controller.
+--            clear_selector => cp_clear_selector, -- Requests clearing the old keypad selection.
+--            item_chosen    => cp_item_chosen,    -- Reports that an item has been selected.
+--            price_error    => cp_price_error,    -- Reports an invalid entry.
+--
+--            --Draft price for display.
+--            draft_cents => cp_draft_cents, -- Integer cents, before conversion to display digits.
+--
+--            --Reset outputs.
+--            system_reset => cp_system_reset,  -- Active-high reset request.
+--            ram_reset_n  => cp_ram_reset_n,   -- Active-low RAM reset request.
+--
+--            --Save outputs.
+--            write_request => cp_write_request,  -- Requests saving the selected item's new price.
+--            ram_address   => cp_address,        -- Address to capture with the save request.
+--            ram_price     => cp_price           -- BCD price to capture with the save request.
+--        );
 
     --Nicholas Winowitch addition END
+	 
 	--Graham Fales 11/18/2026 Start
 	--Creating the multiplexer structer that will govern which things are displayed when
 	xin_s <= C_E & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
-	         '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig3 & dig4 & dig5;
-				
---				'0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when disp_ram = '1' ELSE
---			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig3 & dig4 & dig5 
---				when disp_pay_sig = '1' else
---				C_E & C_R & C_R & C_E & C_R & C_R;
+				'0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
+			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig5 & dig4 & dig3 when choose_display = "101" else
+				C_E & C_R & C_R & C_E & C_R & C_R;
 --	
 	--xin_s <= '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK; --test Commented out by GF 11/19/2026
 	--Graham Fales 11/18/2026 End
@@ -310,7 +317,7 @@ BEGIN
 					 pennies => open);
 	pay : entity work.Payment
 		port map (clk => clk_100hz, 
-					 reset => '0', 
+					 reset => rst_pay, --Connecting to signal so the FSM can reset it
 					 sw => sw_clean, 
 					 paid => paid,
 					 item_price => price,
@@ -356,6 +363,13 @@ BEGIN
 	price <= p_hund * 100 + p_ten * 10 + p_one; --cents, goes into ChangeCalc against paid from Payment
 --	price <= 100; --TEMP test price ($1.00) while ram is commented out, DELETE when the to_int/price line above comes back --EL 11/18/2026
 	
+	--Graham Fales 11/20/2026 start
+	--Creating a multiplexer that will activate a  signal
+	--  This signal will tell the FSM whether the address has changed or not.
+	addrs_changed <= '0' when address_k = addrs_prev else
+	                 '1';
+	--Graham Fales 11/20/2026 End
+	
 	--Graham's FSM commented out until it's finished, it doesn't compile yet --EL 11/17/2026
 	--  (clk not declared, st_mode not in FSM_states and listed twice, case/process never closed,
 	--   and its address_r <= address_k would fight the address_r line above)
@@ -376,16 +390,20 @@ BEGIN
 	
 	   if(key0 = '0') then --Defining Reset State-
 		   state <=std_mode;
-			disp_pay <= '0';
+			rst_pay <= '1';
+			--disp_pay <= '0';
 			
 		elsif(clk_in'event and clk_in = '1') then --When reset is not activated
+		
+		   addrs_prev <= address_k;
 		   Case state is
 			
 			   when std_mode =>
+				   rst_pay <= '0'; --Mkaing it so pay will not reset
 				   R_W <= '1'; --setting RAM to read mode for now
 					
-				   disp_ram <= '0';
-					disp_pay_sig <= '0';
+				   --disp_ram <= '0';
+					--disp_pay_sig <= '0';
 					choose_display <= "100"; --Setting the currently as of 11/17/2026 non-existent 
 					                             --  Multiplexer array to display the address entered
 														  
@@ -402,19 +420,33 @@ BEGIN
 				when gt_price => --We have a valid address and now are sending it to the RAM by allowing the RAM to clock
 				   --Checking to see if we are currently showing the user the price entered
 					--  if we are, we do not want to display or clock the RAM
-				   if (disp_pay_sig = '0') then 
-					   RAM_Enter <= '0'; --Allowing the RAM to go
-						disp_ram <= '1'; --allowing the price of the ram to be displayed
-               choose_display <= "000";
+				   --if (disp_pay_sig = '0') then 
+					RAM_Enter <= '0'; --Allowing the RAM to go
+						--disp_ram <= '1'; --allowing the price of the ram to be displayed
+               choose_display <= "110";
 					
 				   state <= disp_pay;
 				when disp_pay =>	--Displays the values the user is entering
-				   ram_enter <= '1';
-				   disp_ram <= '0';
-					disp_pay_sig <= '1'; --Value corresponding to the pay value being entered by using the multiplexer structure
-					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
-					state <= std_mode;
+				   ram_enter <= '1'; --Turning off the RAM clock
+					choose_display <= "101";
+--				   --disp_ram <= '0'; --Commented on 11/20/2026 by Graham Fales
+--					--disp_pay_sig <= '1'; --Value corresponding to the pay value being entered by using the multiplexer structure
+--					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
+--					state <= std_mode;
+               --If the address changes, we need to move to the partical change state which waits for another change and displays the address
+					--If the address has not changed, we stay in the disp_pay state
+					if (addrs_changed = '1') then
+					   state <= part_addr_ch;
+					else state <= disp_pay;
+					end if;
 					
+				when part_addr_ch => --Defining a state that waits until the address has been changed again to allow the address to be clocked in the RAM
+				   --Setting the display to display the address being entered
+					choose_display <= "100";
+					if (addrs_changed = '1') then
+					   state <= std_mode;
+					else state <= part_addr_ch;
+					end if;
 			   when others => --covering default
 				   state <= std_mode;
 			end case;
