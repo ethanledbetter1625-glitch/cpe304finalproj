@@ -13,7 +13,8 @@ use ieee.numeric_std.all;
 entity FinalProject is
 	port(clk_in : in std_logic;    --50 mhz board clock
 		  key0 : in std_logic;      --active low
-		  
+		  -- Nicholas Winowitch addition 11/18/2026
+		  Key2 : in std_logic; -- active low maintence button
 		  --CC 11/18/2026 START
 		  LEDR : out std_logic_vector(3 downto 0); --LED Lights output
 		  --CC 11/18/2026 END
@@ -150,7 +151,30 @@ ARCHITECTURE FPArch OF FinalProject IS
 	constant C_T     : std_logic_vector(4 downto 0) := "10111";
 	constant C_DASH  : std_logic_vector(4 downto 0) := "11000";
 	--EL 11/17/26 end
-	
+	--Nicholas Winowitch 11/18/2026 additions begin
+	--Inputs supplied.
+    signal cp_item_valid    : std_logic;
+    signal cp_purchase_idle : std_logic;
+
+    --Maintenance status and keypad-clear request.
+    signal cp_setup_active   : std_logic;
+    signal cp_clear_selector : std_logic;
+    signal cp_item_chosen    : std_logic;
+    signal cp_price_error    : std_logic;
+
+    --Price being entered, in integer cents.
+    signal cp_draft_cents : integer range 0 to 999;
+
+    --Reset outputs from my controller.
+    signal cp_system_reset : std_logic;
+    signal cp_ram_reset_n  : std_logic;
+
+    --Save request, selected item, and new BCD price.
+    signal cp_write_request : std_logic;
+    signal cp_address : std_logic_vector(7 downto 0);
+    signal cp_price   : std_logic_vector(11 downto 0);
+    
+	 --NICK ADDITIONS END
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 5));
 	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 5));
@@ -178,6 +202,76 @@ BEGIN
 					sw_pulse => sw_pulse(i)
 			  );
 	end generate;
+	--Nicholas Winowitch 11/19/2026 ChangePrices instance START
+
+    --Accept item locations with row and column digits 1 to 4.
+    --Examples: x"11", x"23", x"44".
+    --Incomplete entries such as x"F2" are not valid.
+    cp_item_valid <= '1' when
+        (
+            address_k(7 downto 4) = x"1" or
+            address_k(7 downto 4) = x"2" or
+            address_k(7 downto 4) = x"3" or
+            address_k(7 downto 4) = x"4"
+        )
+        and
+        (
+            address_k(3 downto 0) = x"1" or
+            address_k(3 downto 0) = x"2" or
+            address_k(3 downto 0) = x"3" or
+            address_k(3 downto 0) = x"4"
+        )
+        else '0';
+
+
+    --Provisional permission using the current main-file signals.
+    --This checks the current state and deposited amount.
+    --It is not a complete transaction-idle check.
+    cp_purchase_idle <= '1' when
+        state = std_mode and paid = 0
+        else '0';
+
+
+    price_controller : entity work.ChangePrices
+        port map (
+            --Clock and separate reset.
+            clk   => clk_in,
+            reset => '0',
+
+            --Physical active-low buttons.
+            key0 => key0,
+            key2 => key2,
+
+            --Permission to enter maintenance.
+            purchase_idle => cp_purchase_idle,
+
+            --Item selected using the existing keypad.
+            item_address => address_k,
+            item_valid   => cp_item_valid,
+
+            --Existing debounced switch levels.
+            sw_clean => sw_clean,
+
+            --Maintenance and entry status.
+            setup_active   => cp_setup_active,
+            clear_selector => cp_clear_selector,
+            item_chosen    => cp_item_chosen,
+            price_error    => cp_price_error,
+
+            --Draft price for display.
+            draft_cents => cp_draft_cents,
+
+            --Reset outputs.
+            system_reset => cp_system_reset,
+            ram_reset_n  => cp_ram_reset_n,
+
+            --Save outputs.
+            write_request => cp_write_request,
+            ram_address   => cp_address,
+            ram_price     => cp_price
+        );
+
+    --Nicholas Winowitch addition END
 	--Graham Fales 11/18/2026 Start
 	--Creating the multiplexer structer that will govern which things are displayed when
 	xin_s <= C_E & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
