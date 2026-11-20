@@ -5,9 +5,9 @@ use ieee.numeric_std.all;
 --3 -- integer outputs
 entity To_Int_Entity is
    port(Data : in std_logic_vector(11 downto 0);
-	     Int3 : out integer range 0 to 4;
-		  Int2 : out integer range 0 to 4;
-		  Int1 : out integer range 0 to 4);
+	     Int3 : out integer range 0 to 10;
+		  Int2 : out integer range 0 to 10;
+		  Int1 : out integer range 0 to 10);
 end;
 
 --Creating the architecture of this program
