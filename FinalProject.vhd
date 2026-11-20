@@ -153,26 +153,26 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--EL 11/17/26 end
 	--Nicholas Winowitch 11/18/2026 additions begin
 	--Inputs supplied.
-    signal cp_item_valid    : std_logic;
-    signal cp_purchase_idle : std_logic;
+    signal cp_item_valid    : std_logic; --indicates both keypad address digits are within the allowed range 1-4
+    signal cp_purchase_idle : std_logic; --gives permission to enter maintenance mode
 
     --Maintenance status and keypad-clear request.
-    signal cp_setup_active   : std_logic;
-    signal cp_clear_selector : std_logic;
-    signal cp_item_chosen    : std_logic;
-    signal cp_price_error    : std_logic;
+    signal cp_setup_active   : std_logic; -- '1' while ChangePricees is in maintenance mode
+    signal cp_clear_selector : std_logic; -- Requests clearing the previous keypad selection
+    signal cp_item_chosen    : std_logic; -- '1' when an item is selected for editing or save request
+    signal cp_price_error    : std_logic; -- '1' when the controller detects an invalid selection or error
 
     --Price being entered, in integer cents.
-    signal cp_draft_cents : integer range 0 to 999;
+    signal cp_draft_cents : integer range 0 to 999; -- Draft value for the display. So 135 would mean $1.35
 
     --Reset outputs from my controller.
-    signal cp_system_reset : std_logic;
-    signal cp_ram_reset_n  : std_logic;
+    signal cp_system_reset : std_logic; --Active-high reset request '1' means restart
+    signal cp_ram_reset_n  : std_logic; --Active-low ram reset request '0' means restart
 
     --Save request, selected item, and new BCD price.
-    signal cp_write_request : std_logic;
-    signal cp_address : std_logic_vector(7 downto 0);
-    signal cp_price   : std_logic_vector(11 downto 0);
+    signal cp_write_request : std_logic; -- clock cycle saves request
+    signal cp_address : std_logic_vector(7 downto 0); --selected items row and column digits say x23 means item 23
+    signal cp_price   : std_logic_vector(11 downto 0); --three BCD price digits x135 would mean $1.35
     
 	 --NICK ADDITIONS END
 BEGIN
@@ -202,11 +202,11 @@ BEGIN
 					sw_pulse => sw_pulse(i)
 			  );
 	end generate;
-	--Nicholas Winowitch 11/19/2026 ChangePrices instance START
+	--Nicholas Winowitch 11/19/2026 ChangePrice connections START
 
-    --Accept item locations with row and column digits 1 to 4.
-    --Examples: x"11", x"23", x"44".
-    --Incomplete entries such as x"F2" are not valid.
+    --Validate the item address from the keypad
+	 --upper four bits = row digit. Lower four bits = column digit.
+	 --Both digits must be 1-4. 
     cp_item_valid <= '1' when
         (
             address_k(7 downto 4) = x"1" or
@@ -221,54 +221,57 @@ BEGIN
             address_k(3 downto 0) = x"3" or
             address_k(3 downto 0) = x"4"
         )
-        else '0';
+        else '0';  --Rejects the invalid or incomplete addresses
+		  -- This checks the stored address, not whether a new key was pressed.
+        -- The keypad selector must be cleared between item selections.
 
 
-    --Provisional permission using the current main-file signals.
-    --This checks the current state and deposited amount.
-    --It is not a complete transaction-idle check.
+        -- Provisional permission to enter maintenance.
+        -- This checks the main state and deposited amount.
+        -- The overall FSM still needs to provide a complete transaction-idle check.
     cp_purchase_idle <= '1' when
-        state = std_mode and paid = 0
+        state = std_mode and paid = 0 -- Standard mode with not deposited money
         else '0';
-
-
+		  -- Create and connect the ChangePrices controller.
+        -- Left of => is the ChangePrices port.
+        -- Right of => is its connection in FinalProject.
     price_controller : entity work.ChangePrices
         port map (
             --Clock and separate reset.
-            clk   => clk_in,
-            reset => '0',
+            clk   => clk_in, -- uses the boards 50MHz clock
+            reset => '0',    -- separate reset is not active. Internal KEY0 handling still operates.
 
             --Physical active-low buttons.
-            key0 => key0,
-            key2 => key2,
+            key0 => key0, --Save in maintenance mode, reset in purchase mode.
+            key2 => key2, --Enter/Exit
 
             --Permission to enter maintenance.
-            purchase_idle => cp_purchase_idle,
+            purchase_idle => cp_purchase_idle, -- Must be '1' to accept a request to enter maintenance.
 
             --Item selected using the existing keypad.
-            item_address => address_k,
-            item_valid   => cp_item_valid,
+            item_address => address_k,     -- Supply the row and column digits of the selected item.
+            item_valid   => cp_item_valid, -- Indicate that both digits are within the allowed range.
 
             --Existing debounced switch levels.
             sw_clean => sw_clean,
 
             --Maintenance and entry status.
-            setup_active   => cp_setup_active,
-            clear_selector => cp_clear_selector,
-            item_chosen    => cp_item_chosen,
-            price_error    => cp_price_error,
+            setup_active   => cp_setup_active,   -- Reports maintenance mode to the overall controller.
+            clear_selector => cp_clear_selector, -- Requests clearing the old keypad selection.
+            item_chosen    => cp_item_chosen,    -- Reports that an item has been selected.
+            price_error    => cp_price_error,    -- Reports an invalid entry.
 
             --Draft price for display.
-            draft_cents => cp_draft_cents,
+            draft_cents => cp_draft_cents, -- Integer cents, before conversion to display digits.
 
             --Reset outputs.
-            system_reset => cp_system_reset,
-            ram_reset_n  => cp_ram_reset_n,
+            system_reset => cp_system_reset,  -- Active-high reset request.
+            ram_reset_n  => cp_ram_reset_n,   -- Active-low RAM reset request.
 
             --Save outputs.
-            write_request => cp_write_request,
-            ram_address   => cp_address,
-            ram_price     => cp_price
+            write_request => cp_write_request,  -- Requests saving the selected item's new price.
+            ram_address   => cp_address,        -- Address to capture with the save request.
+            ram_price     => cp_price           -- BCD price to capture with the save request.
         );
 
     --Nicholas Winowitch addition END
