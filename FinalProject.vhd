@@ -56,9 +56,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--EL 11/04/2026
 	
 	--Graham Fales 11/20/2026 start
-	--Creating a signal to record the previous value of the address
-	signal addrs_prev : std_logic_vector(7 downto 0);
-	--Creating a signal to activate if the current and previous addresses are not equal
+	--Creating a signal to activate if the shift register inside the Keypad_Enity is shifting a new value
 	signal addrs_changed : std_logic:='0';
 	--Defining a signal to reset the payment entity
 	signal rst_pay : std_logic;
@@ -113,7 +111,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Graham Fales 11/17/2026 Start
 	--Defining an enumerated type that gives the states of the overall FSM
 	--This enum type will need to be updated as more states are added
-   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch,vend_go,vend_st,clear_st);
+   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch,vend_go,vend_st,clear_st,key_p1,key_r1,key_p2);
    --Declaring a signal that will represent the state of the machine
    signal state : FSM_states;
 
@@ -123,10 +121,8 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--   And then to use a structure of multiplexers which will assign multiple signals from the different
    --   entities to this one signal based on the value of the below signal. The FSM will assign the value
 	--   of this signal.
-	signal choose_display : std_logic_vector(2 downto 0);	--Making this the only signal that governs displays
-	signal disp_ram : std_logic := '0';
-	signal disp_pay_sig : std_logic := '0';
-	--Currently 100 means "display the address".
+	signal choose_display : std_logic_vector(2 downto 0);
+	  --Currently 100 means "display the address".
 	
 	--Another signal will be made that will control Hex 5 to 3
 	--   This signal will be used to display error messages or RAM values
@@ -300,7 +296,7 @@ BEGIN
 	 
 	--Graham Fales 11/18/2026 Start
 	--Creating the multiplexer structer that will govern which things are displayed when
-	xin_s <= C_E & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
+	xin_s <= C_BLANK & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
 				'0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
 			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig5 & dig4 & dig3 when choose_display = "101" else
 				C_BLANK & C_BLANK & C_BLANK & C_BLANK & C_BLANK & C_BLANK when choose_display = "111" else
@@ -444,7 +440,9 @@ BEGIN
 	             --                to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4)) then 
 					 if(((address_k(7 downto 4) = "0001") or (address_k(7 downto 4) = "0010") or (address_k(7 downto 4) = "0011") or (address_k(7 downto 4) = "0100")) and 
 					 ((address_k(3 downto 0) = "0001") or (address_k(3 downto 0) = "0010") or (address_k(3 downto 0) = "0011") or (address_k(3 downto 0) = "0100"))) then
-					   state <= gt_price; --If a valid address is entered, change to the next state
+					   if (addrs_changed = '0') then --Checking to make sure the key has been released
+						   state <= gt_price; --If a valid address is entered, change to the next state
+						end if;
 					 else state <= std_mode; --If the address is invalid stay in this state until a valid address is entered
 					 end if;
 					
@@ -459,14 +457,12 @@ BEGIN
 				   ram_enter <= '1'; --Turning off the RAM clock
 					choose_display <= "101";
 					LED_sel <= '1';
---				   --disp_ram <= '0'; --Commented on 11/20/2026 by Graham Fales
---					--disp_pay_sig <= '1'; --Value corresponding to the pay value being entered by using the multiplexer structure
 --					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
 --					state <= std_mode;
                --If the address changes, we need to move to the partical change state which waits for another change and displays the address
 					--If the address has not changed, we stay in the disp_pay state
 					if (addrs_changed = '1') then
-					   state <= part_addr_ch;
+					   state <= key_p1;
 						
 					elsif (key3 = '0') then --User is trying to vend
 					   state <= vend_go; --Move to vend state
@@ -474,13 +470,28 @@ BEGIN
 						
 					else state <= disp_pay;
 					end if;
+			   when key_p1 => --when a keypad is pressed on the keyboard, we enter this state
+			      if (addrs_changed = '0') then --Essentially the key would have been released for this signal to be 0
+					   state <= key_r1;
+					else state <= key_p1;
+					end if; 
+				
+				when key_r1 => --Enter this state when the key is released
+				               --This state moves to the partial address change state
+				   state <= part_addr_ch;
 					
 				when part_addr_ch => --Defining a state that waits until the address has been changed again to allow the address to be clocked in the RAM
 				   --Setting the display to display the address being entered
 					choose_display <= "100";
 					if (addrs_changed = '1') then
-					   state <= std_mode;
+					   state <= key_p2;  --Move to the second key is pressed state, indicating the second number is being entered for an address
 					else state <= part_addr_ch;
+					end if;
+					
+				when key_p2 => --This state notes that the key has been pressed and waits for the key to be released to change states 
+				   if (addrs_changed = '0') then
+					   state <= std_mode;
+					else state <= key_p2;
 					end if;
 					
 				when vend_go => --This state activates the change dispenser, displays blanks, and set the LED's to Cayden's control
