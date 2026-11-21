@@ -15,6 +15,7 @@ entity Shift_Reg_Entity is
    port(number : in std_logic_vector(3 downto 0);
 	     shift  : in std_logic;
 		  reset  : in std_logic;
+		  clear  : in std_logic;
 		  reg_select : in std_logic;
 		  addrs  : out std_logic_vector(7 downto 0);
 		  data   : out std_logic_vector(11 downto 0)); --Carries the data register out
@@ -31,12 +32,12 @@ architecture shift_reg of Shift_Reg_Entity is
 begin
    
    --Defining a process that will be activated whenever reset or shift changes
-	Shift_Process: process(reset,shift)
+	Shift_Process: process(reset,clear,shift)
    
 	begin
 	   --Defining the reset state
 		--If reset is activated, the values of address will be set to 0
-		if(reset = '0') then
+		if(reset = '0' or clear = '1') then
 		   address_Reg <= "11111111";
 			data_Reg <= "111111111111";
 		--Creating the shift algorythm if shift = 1
@@ -46,7 +47,7 @@ begin
 			if(reg_select = '1') then
 			   address_Reg <= address_Reg(3 downto 0) & number;
 			else data_Reg <= data_Reg(7 downto 0) & number;
-			end if;
+			end if;	   
 		end if;
 	end process;
 	addrs<=address_Reg;

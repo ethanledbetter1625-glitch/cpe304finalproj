@@ -15,6 +15,7 @@ entity FinalProject is
 		  key0 : in std_logic;      --active low
 		  -- Nicholas Winowitch addition 11/18/2026
 		  Key2 : in std_logic; -- active low maintence button
+		  Key3 : in std_logic; --Graham Fales 11/20/2026 for vending purposes
 		  --CC 11/18/2026 START
 		  LEDR : out std_logic_vector(3 downto 0); --LED Lights output
 		  --CC 11/18/2026 END
@@ -61,6 +62,8 @@ ARCHITECTURE FPArch OF FinalProject IS
 	signal addrs_changed : std_logic:='0';
 	--Defining a signal to reset the payment entity
 	signal rst_pay : std_logic;
+	--Defining a signal that will carry the clear command to the keypad entity- this will be so that the address can be cleared after a vend
+	signal clear_addrs : std_logic :='0';
 	--Graham Fales 11/20/2026 End
 	
 	--Graham Fales 11/14/2026 Start
@@ -96,6 +99,13 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--This signal will send data to the RAM for writing
 	signal data_R_in : std_logic_vector(11 downto 0);
 	
+	--Creating two signals for LED's. LED_E will be assigned to the output of Ethan's Pay entity
+	--   LED_C will be assigned to the output of Caden's dispensor entity
+	--   A multiplexer structure will be used to choose which of these signals to assign to LEDR
+	signal LED_E : std_logic_vector(3 downto 0);
+	signal LED_C : std_logic_vector(3 downto 0);
+	signal LED_sel : std_logic; --Choose which entity is controlling which LED's
+	
 	--This signal will carry data away from the RAM;
 	signal data_R_out : std_logic_vector(11 downto 0);
 	--Graham Fales 11/14/2026 End
@@ -103,7 +113,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Graham Fales 11/17/2026 Start
 	--Defining an enumerated type that gives the states of the overall FSM
 	--This enum type will need to be updated as more states are added
-   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch);
+   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch,vend_st,clear_st);
    --Declaring a signal that will represent the state of the machine
    signal state : FSM_states;
 
@@ -184,6 +194,7 @@ ARCHITECTURE FPArch OF FinalProject IS
     signal cp_price   : std_logic_vector(11 downto 0); --three BCD price digits x135 would mean $1.35
     
 	 --NICK ADDITIONS END
+	 
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 5));
 	dig1 <= std_logic_vector(to_unsigned((num / 10) mod 10, 5));
@@ -290,12 +301,14 @@ BEGIN
 	xin_s <= C_E & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
 				'0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
 			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig5 & dig4 & dig3 when choose_display = "101" else
+				C_BLANK & C_BLANK & C_BLANK & C_E & C_R & C_R when choose_display = "111" else
 				C_E & C_R & C_R & C_E & C_R & C_R;
 --	
 	--xin_s <= '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK; --test Commented out by GF 11/19/2026
 	--Graham Fales 11/18/2026 End
 	--EL 11/04/2026
 
+	
 	--xin_s <= C_BLANK & C_BLANK & C_BLANK & '0' & dig2 & '0' & dig1 & '0' & dig0; --hex5-3 blank, hex2-0 = num --EL 11/17/2026 --Commented by GF 11/18/2026
 	disp : entity work.Part2
 		port map (xin => xin_s, --part2 is 6 x 5 bit codes now --EL 11/17/2026
@@ -321,22 +334,22 @@ BEGIN
 					 sw => sw_clean, 
 					 paid => paid,
 					 item_price => price,
-					 LED => LEDR --kicked back coin leds, led0 nickel ... led3 dollar --EL 11/18/2026
+					 LED => LED_E --kicked back coin leds, led0 nickel ... led3 dollar --EL 11/18/2026
 					 ); --tabbed for visibility EL
 	--testing payment method
 	--EL 11/04/2026 uses debounced switches
 	
 	--CC 11/18/2026 START
---	Dispenser: entity work.ChangeDispenser
---		port map(
---			clk => clk_in,
---			reset => not key0,
---			start => dispense_start,
---			change_cents => num, --Connecting my change_cents value to num, the integer value outputed from EL's ChangeCalc
---			LED => LEDR, --Using all four LEDs assigned above
---			busy => dispenser_busy, --Calling busy from interior to dispenser_busy signal in main
---			done => dispenser_done --Calling done from interior to dispenser_done signal in main
---			);
+	Dispenser: entity work.ChangeDispenser
+		port map(
+			clk => clk_in,
+			reset => not key0,
+			start => dispense_start,
+			change_cents => num, --Connecting my change_cents value to num, the integer value outputed from EL's ChangeCalc
+			LED => LED_C, --Using all four LEDs assigned above
+			busy => dispenser_busy, --Calling busy from interior to dispenser_busy signal in main
+			done => dispenser_done --Calling done from interior to dispenser_done signal in main
+			);
 	--CC 11/18/2026 END
 	
 	div_btn : clk_div
@@ -346,7 +359,7 @@ BEGIN
 	
 	--Graham Fales 11/14/2026 Start
 	--Instantiating the Keypad_Entity
-	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
+	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,clear_addrs,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
 	
 	--Instantiating the RAM_Entity
 	Ram : entity work.RAM_Entity port map(clk_in,R_W,key0,Ram_Enter,address_r,data_r_in,data_r_out); --fixed syntax --EL 11/17/2026
@@ -368,7 +381,13 @@ BEGIN
 	--  This signal will tell the FSM whether the address has changed or not.
 	addrs_changed <= '0' when address_k = addrs_prev else
 	                 '1';
+	--Choosing which entity to control the LED's
+	LEDR <= LED_E when LED_sel = '1' else
+	        LED_C;
 	--Graham Fales 11/20/2026 End
+	
+	
+	
 	
 	--Graham's FSM commented out until it's finished, it doesn't compile yet --EL 11/17/2026
 	--  (clk not declared, st_mode not in FSM_states and listed twice, case/process never closed,
@@ -392,6 +411,7 @@ BEGIN
 		   state <=std_mode;
 			rst_pay <= '1';
 			--disp_pay <= '0';
+			LED_sel <= '1'; --Assigning Ethan's pay entity to run the LED's be default
 			
 		elsif(clk_in'event and clk_in = '1') then --When reset is not activated
 		
@@ -399,8 +419,9 @@ BEGIN
 		   Case state is
 			
 			   when std_mode =>
-				   rst_pay <= '0'; --Mkaing it so pay will not reset
+				   rst_pay <= '0'; --Making it so pay will not reset
 				   R_W <= '1'; --setting RAM to read mode for now
+					clear_addrs <= '0'; --Setting the address to not clear
 					
 				   --disp_ram <= '0';
 					--disp_pay_sig <= '0';
@@ -429,6 +450,7 @@ BEGIN
 				when disp_pay =>	--Displays the values the user is entering
 				   ram_enter <= '1'; --Turning off the RAM clock
 					choose_display <= "101";
+					LED_sel <= '1';
 --				   --disp_ram <= '0'; --Commented on 11/20/2026 by Graham Fales
 --					--disp_pay_sig <= '1'; --Value corresponding to the pay value being entered by using the multiplexer structure
 --					--Setting the next state to the std_mode state so that an address can be entered while the payment and other entities are running
@@ -437,6 +459,11 @@ BEGIN
 					--If the address has not changed, we stay in the disp_pay state
 					if (addrs_changed = '1') then
 					   state <= part_addr_ch;
+						
+					elsif (key3 = '0') then --User is trying to vend
+					   state <= vend_st; --Move to vend state
+						dispense_start <= '1';--Starting the dispensor in the previous state
+						
 					else state <= disp_pay;
 					end if;
 					
@@ -447,6 +474,31 @@ BEGIN
 					   state <= std_mode;
 					else state <= part_addr_ch;
 					end if;
+					
+				when vend_st => 
+				   --Need to activate Caden's change LED entity 
+					--dispense_start <= '1';
+					choose_display <= "111"; --Displaying blanks
+					LED_sel <= '0'; --Caden now has control of the LED's
+					
+					if (dispenser_done <= '0') then
+					   dispense_start <= '0';
+					end if;
+					--Staying in vend_st as long as Caden's dispensor is running
+					if (dispense_start <= '0') then	
+					   state <= clear_st; --Moving to the clear state if the dispensor is done
+						--rst_pay <= '1'; --Clearing the paid amount
+						--dispense_start <= '0'; --Turning of the dispensor
+					else state <= vend_st;
+					
+					end if;
+					
+				when clear_st => --This state will send the clear signal to the address register of the keypad which will clear out the address
+				   clear_addrs <= '1'; --Clear signal
+					rst_pay <= '1'; --Clearing the paid amount
+					state <= std_mode; --Changes to the beginning state to start the process over again
+				   
+				
 			   when others => --covering default
 				   state <= std_mode;
 			end case;

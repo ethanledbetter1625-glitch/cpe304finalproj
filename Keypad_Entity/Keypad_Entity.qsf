@@ -76,6 +76,7 @@ set_location_assignment PIN_AF29 -to disp2[4]
 set_location_assignment PIN_AF30 -to disp2[5]
 set_location_assignment PIN_AD27 -to disp2[6]
 set_location_assignment PIN_V16 -to LED
+set_global_assignment -name VHDL_FILE ../clk_div.vhd
 set_global_assignment -name VHDL_FILE Shift_Reg_Entity.vhd
 set_global_assignment -name VHDL_FILE Key_Decode_Entity.vhd
 set_global_assignment -name VHDL_FILE seven_seg_decode.vhd

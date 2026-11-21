@@ -9,6 +9,7 @@ entity Keypad_Entity is
    port(clk : in std_logic;
 	     reset  : in std_logic;
 		  Adrs_Data : in std_logic;
+		  clear : in std_logic;
 	     column : inout std_logic_vector( 2 downto 0);
 		  row    : inout std_logic_vector( 3 downto 0);
 		 
@@ -125,7 +126,7 @@ begin
 	decoder: entity work.Key_Decode_Entity port map(result,to_shift_num);
 	--Calling in the shift register entity
 	number <= "1000";
-	shift_registor: entity work.Shift_Reg_Entity port map(to_shift_num,shift,reset,addrs_D,address_temp,data_temp);
+	shift_registor: entity work.Shift_Reg_Entity port map(to_shift_num,shift,reset,clear,addrs_D,address_temp,data_temp);
 	
 	--The following code is for testing only. Please ignore
 	--display1: entity work.seven_seg_decode port map(address(3 downto 0),disp1);
