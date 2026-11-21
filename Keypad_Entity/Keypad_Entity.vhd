@@ -16,7 +16,9 @@ entity Keypad_Entity is
 		  --Creating an output that will receive the values from the shift reg
 		  address : out std_logic_vector(7 downto 0);
 		  --Creating the data bus that will carry data from the shift reg
-		  data : out std_logic_vector(11 downto 0));
+		  data : out std_logic_vector(11 downto 0);
+		  --Signal to alert outside entities when a shift as occurred
+		  reg_changed : out std_logic);
 		  
 		  
 		  --The following sections of code referencing displays are for testing only
@@ -107,7 +109,7 @@ begin
 					   if(result = "0111011" or result = "0111101" or result = "0111110" or result = "1011011" or result = "1011101" or
 						result = "1011110" or result = "1101011" or result = "1101101" or result = "1101110" or 
 						result = "1110011" or result = "1110101" or result = "1110110") then 
-						--condition occurs when none of the buttons are pressed
+						--condition occurs when a button is pressed
 						   shift <= '1';
 						else shift <= '0';
 						end if;
@@ -120,7 +122,8 @@ begin
 		result <= row_temp & column_temp;
 	end process;
 	
-						
+	--Assigning the alert signal of shift to the shift signal
+   reg_changed <= shift;	
    --Calling in the decoder entity to convert the 7 bit result inot a 4 bit recognizable
 	--binary number
 	decoder: entity work.Key_Decode_Entity port map(result,to_shift_num);

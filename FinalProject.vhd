@@ -113,7 +113,7 @@ ARCHITECTURE FPArch OF FinalProject IS
 	--Graham Fales 11/17/2026 Start
 	--Defining an enumerated type that gives the states of the overall FSM
 	--This enum type will need to be updated as more states are added
-   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch,vend_st,clear_st);
+   type FSM_states is (std_mode,gt_price,disp_pay,part_addr_ch,vend_go,vend_st,clear_st);
    --Declaring a signal that will represent the state of the machine
    signal state : FSM_states;
 
@@ -194,6 +194,8 @@ ARCHITECTURE FPArch OF FinalProject IS
     signal cp_price   : std_logic_vector(11 downto 0); --three BCD price digits x135 would mean $1.35
     
 	 --NICK ADDITIONS END
+	 
+	 signal FSM_clk : std_logic := '0'; --Creating a slower clock for the FSM to see if bug can be fixed
 	 
 BEGIN
 	dig0 <= std_logic_vector(to_unsigned(num mod 10, 5));
@@ -301,7 +303,7 @@ BEGIN
 	xin_s <= C_E & C_BLANK & C_BLANK & C_BLANK & '0' & address_k(7 downto 4) & '0' & address_k(3 downto 0) when choose_display = "100" else
 				'0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK when choose_display = "110" ELSE
 			   '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & dig5 & dig4 & dig3 when choose_display = "101" else
-				C_BLANK & C_BLANK & C_BLANK & C_E & C_R & C_R when choose_display = "111" else
+				C_BLANK & C_BLANK & C_BLANK & C_BLANK & C_BLANK & C_BLANK when choose_display = "111" else
 				C_E & C_R & C_R & C_E & C_R & C_R;
 --	
 	--xin_s <= '0' & data_r_out(11 downto 8) & '0' & data_r_out(7 downto 4) & '0' & data_r_out(3 downto 0) & C_BLANK & C_BLANK & C_BLANK; --test Commented out by GF 11/19/2026
@@ -357,9 +359,15 @@ BEGIN
 		port map (clock_in => clk_in, clock_out => clk_100hz);
 	--EL 11/04/2026
 	
+	--Graham Fales 11/21/2026 start
+	div_clk_FSM : clk_div
+		generic map (cnt_max => 62500) --Slower than keypad clock
+		port map (clock_in => clk_in, clock_out => FSM_clk);
+	--Graham Fales 11/21/2026 End
+	
 	--Graham Fales 11/14/2026 Start
 	--Instantiating the Keypad_Entity
-	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,clear_addrs,column,row,address_k,data_kpad); --fixed syntax + port order --EL 11/17/2026
+	keypad : entity work.Keypad_Entity port map(clk_in,key0,reg_sel,clear_addrs,column,row,address_k,data_kpad,addrs_changed); --fixed syntax + port order --EL 11/17/2026
 	
 	--Instantiating the RAM_Entity
 	Ram : entity work.RAM_Entity port map(clk_in,R_W,key0,Ram_Enter,address_r,data_r_in,data_r_out); --fixed syntax --EL 11/17/2026
@@ -377,10 +385,12 @@ BEGIN
 --	price <= 100; --TEMP test price ($1.00) while ram is commented out, DELETE when the to_int/price line above comes back --EL 11/18/2026
 	
 	--Graham Fales 11/20/2026 start
+	
 	--Creating a multiplexer that will activate a  signal
 	--  This signal will tell the FSM whether the address has changed or not.
-	addrs_changed <= '0' when address_k = addrs_prev else
-	                 '1';
+--	addrs_changed <= '0' when address_k = addrs_prev else --Commented by GF 11/21/2026 New Idea, have signal 
+--	                 '1';										   --from Keypad Entity that alerts when an address change occurs
+						  
 	--Choosing which entity to control the LED's
 	LEDR <= LED_E when LED_sel = '1' else
 	        LED_C;
@@ -419,12 +429,10 @@ BEGIN
 		   Case state is
 			
 			   when std_mode =>
-				   rst_pay <= '0'; --Making it so pay will not reset
+				   rst_pay <= '1'; --Making it so pay will not reset
 				   R_W <= '1'; --setting RAM to read mode for now
 					clear_addrs <= '0'; --Setting the address to not clear
-					
-				   --disp_ram <= '0';
-					--disp_pay_sig <= '0';
+
 					choose_display <= "100"; --Setting the currently as of 11/17/2026 non-existent 
 					                             --  Multiplexer array to display the address entered
 														  
@@ -432,21 +440,21 @@ BEGIN
 					
 					--Checking to make sure a valid address has been entered -- We need to talk to Barlow about what should happen if an 
 					--  invalid address has been entered
-					if ((to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
-	                             to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4)) then 
+					--if ((to_integer(unsigned(address_k(7 downto 4))) >= 1 and to_integer(unsigned(address_k(7 downto 4))) <= 4 and
+	             --                to_integer(unsigned(address_k(3 downto 0))) >= 1 and to_integer(unsigned(address_k(3 downto 0))) <= 4)) then 
+					 if(((address_k(7 downto 4) = "0001") or (address_k(7 downto 4) = "0010") or (address_k(7 downto 4) = "0011") or (address_k(7 downto 4) = "0100")) and 
+					 ((address_k(3 downto 0) = "0001") or (address_k(3 downto 0) = "0010") or (address_k(3 downto 0) = "0011") or (address_k(3 downto 0) = "0100"))) then
 					   state <= gt_price; --If a valid address is entered, change to the next state
-					else state <=std_mode; --If the address is invalid stay in this state until a valid address is entered
-					end if;
+					 else state <= std_mode; --If the address is invalid stay in this state until a valid address is entered
+					 end if;
 					
 				when gt_price => --We have a valid address and now are sending it to the RAM by allowing the RAM to clock
-				   --Checking to see if we are currently showing the user the price entered
-					--  if we are, we do not want to display or clock the RAM
-				   --if (disp_pay_sig = '0') then 
+				
+				   RST_PAY <= '0'; --ALLOWING THE PAY TO CHANGE 
 					RAM_Enter <= '0'; --Allowing the RAM to go
-						--disp_ram <= '1'; --allowing the price of the ram to be displayed
                choose_display <= "110";
+					state <= disp_pay; --Changing state
 					
-				   state <= disp_pay;
 				when disp_pay =>	--Displays the values the user is entering
 				   ram_enter <= '1'; --Turning off the RAM clock
 					choose_display <= "101";
@@ -461,8 +469,8 @@ BEGIN
 					   state <= part_addr_ch;
 						
 					elsif (key3 = '0') then --User is trying to vend
-					   state <= vend_st; --Move to vend state
-						dispense_start <= '1';--Starting the dispensor in the previous state
+					   state <= vend_go; --Move to vend state
+						--dispense_start <= '1';--Starting the dispensor in the previous state
 						
 					else state <= disp_pay;
 					end if;
@@ -475,23 +483,24 @@ BEGIN
 					else state <= part_addr_ch;
 					end if;
 					
+				when vend_go => --This state activates the change dispenser, displays blanks, and set the LED's to Cayden's control
+				    dispense_start <= '1';--Starting the dispensor in the previous state
+					 choose_display <= "111"; --Displaying blanks
+					 LED_sel <= '0'; --Caden now has control of the LED's
+					 state <= vend_st;
+					 
 				when vend_st => 
+				   dispense_start <= '0'; --Turning off the start button
 				   --Need to activate Caden's change LED entity 
 					--dispense_start <= '1';
-					choose_display <= "111"; --Displaying blanks
-					LED_sel <= '0'; --Caden now has control of the LED's
+					--choose_display <= "111"; --Displaying blanks
 					
-					if (dispenser_done <= '0') then
-					   dispense_start <= '0';
-					end if;
-					--Staying in vend_st as long as Caden's dispensor is running
-					if (dispense_start <= '0') then	
-					   state <= clear_st; --Moving to the clear state if the dispensor is done
-						--rst_pay <= '1'; --Clearing the paid amount
-						--dispense_start <= '0'; --Turning of the dispensor
-					else state <= vend_st;
 					
+					if (dispenser_done <= '0') then --Trying to create a sink state
+					   state <= vend_st;
+					else state <= clear_st;
 					end if;
+
 					
 				when clear_st => --This state will send the clear signal to the address register of the keypad which will clear out the address
 				   clear_addrs <= '1'; --Clear signal
