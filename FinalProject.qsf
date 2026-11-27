@@ -124,6 +124,7 @@ set_location_assignment PIN_AF16 -to column[2]
 set_location_assignment PIN_AA15 -to key1
 set_location_assignment PIN_W15 -to key2
 set_location_assignment PIN_Y16 -to key3
+set_global_assignment -name VHDL_FILE ErrorTimer.vhd
 set_global_assignment -name VHDL_FILE ChangePrices.vhd
 set_global_assignment -name VHDL_FILE ChangeDispenser.vhd
 set_global_assignment -name VHDL_FILE To_Int_Entity/To_Int_Entity.vhd
